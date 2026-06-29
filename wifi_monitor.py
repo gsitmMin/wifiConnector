@@ -63,6 +63,11 @@ class WifiMonitor:
         if result.returncode != 0:
             self.logger.warning("Failed to read Wi-Fi interface status: %s", result.format_error())
             if result.is_location_permission_error():
+                fallback_status = self._get_windows_wifi_status_fallback()
+                if fallback_status != "unknown":
+                    self.logger.info("Wi-Fi status from Windows fallback: %s", fallback_status)
+                    return fallback_status
+
                 if not self._status_query_blocked_logged:
                     self.logger.warning(
                         "Wi-Fi status query is blocked by Windows location permission; treating status as unknown"
@@ -201,6 +206,50 @@ class WifiMonitor:
 
         connected_states = {"connected", KOREAN_CONNECTED_STATE}
         return state.lower() in connected_states or bool(ssid)
+
+    def _get_windows_wifi_status_fallback(self) -> str:
+        command = """
+$profile = Get-NetConnectionProfile -InterfaceAlias 'Wi-Fi' -ErrorAction SilentlyContinue
+if ($profile) {
+    'connected'
+    exit
+}
+
+$adapter = Get-NetAdapter -Name 'Wi-Fi' -ErrorAction SilentlyContinue
+if (-not $adapter) {
+    'unknown'
+    exit
+}
+
+if ($adapter.Status -eq 'Up' -or $adapter.MediaConnectionState -eq 'Connected') {
+    'connected'
+} elseif ($adapter.Status -eq 'Disconnected' -or $adapter.MediaConnectionState -eq 'Disconnected') {
+    'disconnected'
+} else {
+    'unknown'
+}
+"""
+        try:
+            completed = subprocess.run(
+                ["powershell", "-NoProfile", "-Command", command],
+                capture_output=True,
+                text=True,
+                encoding=locale.getpreferredencoding(False),
+                errors="replace",
+                shell=False,
+                timeout=10,
+            )
+        except Exception:
+            self.logger.exception("Failed to read Wi-Fi status from Windows fallback")
+            return "unknown"
+
+        if completed.returncode != 0:
+            output = (completed.stderr.strip() or completed.stdout.strip()).replace("\r", "").replace("\n", " | ")
+            self.logger.warning("Windows Wi-Fi status fallback failed: %s", output or "no output")
+            return "unknown"
+
+        status = completed.stdout.strip().splitlines()[-1].strip().lower() if completed.stdout.strip() else "unknown"
+        return status if status in {"connected", "disconnected"} else "unknown"
 
     @staticmethod
     def _run_netsh(*args: str) -> CommandResult:
