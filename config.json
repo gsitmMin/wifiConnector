@@ -1,6 +1,13 @@
 {
-  "ssid": "SK_min5G",
+  "ssid": "USTRA",
   "check_interval": 5,
   "retry_interval": 20,
-  "max_retry": 10
+  "max_retry": 10,
+  "tgate": {
+    "enabled": true,
+    "window_title": "Tgate Smart Agent",
+    "username_env": "ID",
+    "password_env": "PW",
+    "submit": true
+  }
 }

@@ -19,8 +19,22 @@ Windows 10/11에서 Wi-Fi 연결 상태를 주기적으로 감시하고, Wi-Fi�
   "ssid": "CompanyWiFi",
   "check_interval": 5,
   "retry_interval": 5,
-  "max_retry": 10
+  "max_retry": 10,
+  "tgate": {
+    "enabled": true,
+    "window_title": "Tgate Smart Agent",
+    "username_env": "TGATE_USERNAME",
+    "password_env": "TGATE_PASSWORD",
+    "submit": true
+  }
 }
+```
+
+Tgate Smart Agent 창이 떠 있고 ID/PW 입력 칸이 감지되면 환경변수의 값을 자동 입력합니다.
+
+```powershell
+$env:TGATE_USERNAME = "your-id"
+$env:TGATE_PASSWORD = "your-password"
 ```
 
 ## Run
